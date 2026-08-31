@@ -1,0 +1,38 @@
+---
+description: Required Python/FastAPI repository layout and file responsibilities
+alwaysApply: true
+---
+
+# Python project structure
+
+Keep a layered layout. Do not dump endpoints, business logic, and models in one file.
+
+```
+app/
+  main.py           # FastAPI app factory and router includes only
+  config.py         # Settings (env, pydantic-settings). No business logic.
+  constants.py      # Domain constants and enums. No I/O.
+  exceptions.py     # Custom exceptions and exception handlers
+  {feature}/
+    route.py        # HTTP layer: path ops, status codes, Depends
+    service.py      # Business logic and orchestration
+    schemas.py      # Pydantic request/response models
+tests/
+  {feature}/
+    test_*.py
+```
+
+## File rules
+
+- `route.py`: parse request, call service, map exceptions to HTTP. No business rules.
+- `service.py`: all business logic. Never import FastAPI `Request`/`Response`.
+- `schemas.py`: Pydantic models only. No DB or HTTP calls.
+- `config.py`: one `Settings` class. Read env here, nowhere else.
+- `constants.py`: magic strings/numbers live here, not inline in routes/services.
+- `exceptions.py`: typed domain errors. Routes translate them to HTTP.
+
+## Do not
+
+- Put Pydantic models inside `route.py` or `service.py`.
+- Call the database or external APIs from `route.py`.
+- Create a new top-level module that duplicates these roles.

@@ -1,0 +1,43 @@
+---
+description: FastAPI endpoints must use Pydantic models for JSON bodies and responses
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# FastAPI + Pydantic
+
+Every JSON request body and JSON response must be a Pydantic `BaseModel` in `schemas.py`. Never accept or return raw `dict`.
+
+```python
+# ❌ BAD
+@router.post("/notes")
+async def create_note(payload: dict) -> dict:
+    return {"id": 1, **payload}
+
+# ✅ GOOD
+class NoteCreate(BaseModel):
+    title: str = Field(..., min_length=1)
+    body: str = Field(..., min_length=1)
+
+class NoteRead(BaseModel):
+    id: int
+    title: str
+    body: str
+
+@router.post("/notes", response_model=NoteRead, status_code=201)
+async def create_note(payload: NoteCreate, service: NoteService = Depends()) -> NoteRead:
+    return service.create(payload)
+```
+
+## Required patterns
+
+- Annotate bodies with a request schema (`Create` / `Update` / `Query`).
+- Set `response_model=` on every path that returns JSON (including lists: `list[NoteRead]`).
+- Use `Field` for constraints, aliases, and examples. Prefer `model_config` over class `Config`.
+- Use `model_dump()` / `model_validate()` at service boundaries. Do not pass untyped dicts between layers.
+- Path/query params that are more than one primitive belong in a Pydantic model.
+
+## Do not
+
+- Use `Body(...)` with a dict, `JSONResponse` with a handwritten dict, or `response_model=None` for JSON APIs.
+- Return ORM/DB objects from routes. Map them to a response schema first.

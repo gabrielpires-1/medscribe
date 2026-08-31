@@ -1,0 +1,35 @@
+---
+description: Every new Python module needs pytest tests that use fake/mock data only
+alwaysApply: true
+---
+
+# Python testing
+
+Every new or changed Python module must get tests in `tests/` before the work is done. Use `pytest`. Never hit real services, databases, or files with real data.
+
+## Fake data only
+
+- Build fixtures with invented values (`"Jane Doe"`, `"note-0001"`, `"555-0100"`).
+- Never use real patient names, clinical notes, credentials, API keys, or production-like records.
+- Mock I/O: `unittest.mock.AsyncMock` / `MagicMock`, or pytest monkeypatch. Services under test must not call the network or a live DB.
+
+```python
+# ❌ BAD — real-looking clinical data, no mocks
+def test_create_note(client):
+    client.post("/notes", json={"patient": "Maria Silva", "cpf": "123.456.789-00"})
+
+# ✅ GOOD — obviously fake payload, service mocked
+def test_create_note_returns_schema(client, mocker):
+    mocker.patch.object(NoteService, "create", return_value=NoteRead(
+        id=1, title="fake-title", body="lorem-ipsum-not-real"
+    ))
+    response = client.post("/notes", json={"title": "fake-title", "body": "lorem-ipsum-not-real"})
+    assert response.status_code == 201
+    assert response.json()["title"] == "fake-title"
+```
+
+## Coverage expectations
+
+- One test file per `route.py` / `service.py` (happy path + error/exception path).
+- Assert status codes and response schema fields, not full snapshot dumps of internals.
+- If a function cannot be tested with fakes, the design is wrong — inject dependencies instead of skipping tests.
