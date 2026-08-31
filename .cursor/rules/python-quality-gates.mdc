@@ -1,0 +1,25 @@
+---
+description: After any new or changed Python code, run ruff, pytest, ty, and pylint
+alwaysApply: true
+---
+
+# Python quality gates
+
+After implementing or changing Python code, run all four tools on the affected paths before considering the work done. Fix failures; do not skip a tool.
+
+```bash
+ruff check .
+ruff format --check .
+pytest
+ty check
+pylint app tests
+```
+
+## Rules
+
+- Run them after the implementation, not instead of writing tests.
+- Scope to the files you touched when a full-repo run is too broad (`ruff check path`, `pylint path`, `pytest path`).
+- If a tool is missing from the environment, install/configure it in the project rather than skipping it.
+- Do not add `# noqa`, `# type: ignore`, or pylint disables to silence new issues unless the reason is documented in the same line.
+
+Work is not complete until all four pass.

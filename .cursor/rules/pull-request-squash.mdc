@@ -1,0 +1,28 @@
+---
+description: PRs squash-merge; title must be the main Commitizen commit subject
+alwaysApply: true
+---
+
+# Squash-merge pull requests
+
+This repo squash-merges. The PR title becomes the only commit on `main`, so it must be a valid Commitizen subject — the same as the branch's main/primary commit.
+
+```
+# ❌ BAD
+Add Cursor rules for FastAPI, Python quality, and Commitizen
+Update stuff
+PR to add notes endpoint
+
+# ✅ GOOD
+chore(cursor): add python fastapi and commitizen rules
+feat(notes): add create-note request schema
+```
+
+## Title rules
+
+- Use `<type>(<scope>): <subject>` from the Commitizen rule. Copy the main commit subject when the branch has one primary commit.
+- If the branch has several commits, write one squash title that describes the whole change (still Commitizen). Do not join every commit with commas.
+- Do not use sentence case, "Add X", or a summary that drops the type/scope.
+- Keep the PR body for Summary / Test plan. Do not put the conventional subject only in the body.
+
+When creating a PR, pass this title to `gh pr create --title`. When the existing PR title does not match, update it.

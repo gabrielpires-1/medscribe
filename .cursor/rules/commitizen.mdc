@@ -1,0 +1,63 @@
+---
+description: Use Commitizen conventional commits for every git commit message
+alwaysApply: true
+---
+
+# Commitizen commits
+
+Every git commit message must follow Commitizen / Conventional Commits. Do not use free-form or one-word messages.
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+## Types
+
+Use only: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`.
+
+- `feat` — new user-facing behavior
+- `fix` — bug fix
+- `docs` — docs only
+- `style` — formatting, no logic change
+- `refactor` — internal change, no behavior change
+- `perf` — performance
+- `test` — tests only
+- `chore` — tooling, deps, repo housekeeping
+- `ci` — CI/CD
+- `build` — build/packaging
+- `revert` — revert a prior commit
+
+## Subject rules
+
+- Imperative, lowercase, no trailing period: `add note schema`, not `Added note schema.`
+- One line, ~50 characters; put detail in the body.
+- Scope is optional and lowercase (`api`, `notes`, `deps`).
+
+```
+# ❌ BAD
+update stuff
+Added pydantic models.
+
+# ✅ GOOD
+feat(notes): add create-note request schema
+
+fix(api): return 404 when note is missing
+
+chore: add ruff and pytest quality gates
+```
+
+## Breaking changes
+
+Mark them with `!` after the type/scope and a `BREAKING CHANGE:` footer:
+
+```
+feat(api)!: require NoteCreate body on POST /notes
+
+BREAKING CHANGE: raw JSON dicts are no longer accepted.
+```
+
+When the user asks to commit, draft the message in this format and pass it via HEREDOC. Never invent a type that is not in the list above.
