@@ -17,6 +17,7 @@ from app.exceptions import (
 def _settings(pyannote_poll_timeout_seconds: float = 600) -> Settings:
     return Settings(
         pyannote_api_key="fake-api-key",
+        anthropic_api_key="fake-anthropic-key",
         pyannote_poll_interval_seconds=0,
         pyannote_poll_timeout_seconds=pyannote_poll_timeout_seconds,
     )

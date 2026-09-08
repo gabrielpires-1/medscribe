@@ -1,7 +1,22 @@
 # ADR 0001: POST /transcribe — async transcription via pyannote.ai
 
-- **Status:** accepted
+- **Status:** superseded by [ADR 0002](0002-consultation-pipeline.md) for the public HTTP contract
 - **Date:** 2026-09-07
+
+## Supersession
+
+ADR 0002 replaces the public `POST /transcribe` contract with a consultation aggregate (`POST /GET /consultations`, extract retry). Transcription is an internal step: the client never receives a pyannote `job_id` or the transcript.
+
+The following decisions **remain in effect** for that internal step:
+
+- pyannote.ai as the diarization/transcription provider
+- Turn-level plain-text format (`[SPEAKER_XX] …`)
+- Layered architecture (HTTP / service / client / schemas)
+- User-safe error vs operator logs split (`INTERNAL_SERVER_ERROR_MESSAGE` to the client; job detail in logs)
+- FastAPI `BackgroundTasks` as the MVP async model (no delivery guarantee)
+
+Do not use this ADR as the source of truth for HTTP paths, response bodies, or on-disk layout. See ADR 0002.
+
 
 ## Context
 

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 def pytest_configure() -> None:
     os.environ.setdefault("MEDSCRIBE_PYANNOTE_API_KEY", "fake-api-key")
+    os.environ.setdefault("MEDSCRIBE_ANTHROPIC_API_KEY", "fake-anthropic-key")
 
 
 @pytest.fixture

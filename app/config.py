@@ -17,7 +17,12 @@ class Settings(BaseSettings):
     pyannote_base_url: str = "https://api.pyannote.ai"
     pyannote_poll_interval_seconds: float = 10
     pyannote_poll_timeout_seconds: float = 600
-    transcription_output_dir: Path = Path("data/transcriptions")
+    anthropic_api_key: str
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_model: str = "claude-sonnet-4-5"
+    anthropic_max_tokens: int = 8192
+    consultation_output_dir: Path = Path("data/consultations")
+    cors_origins: list[str] = ["http://localhost:3000"]
 
 
 @lru_cache

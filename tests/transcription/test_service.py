@@ -1,6 +1,5 @@
 import logging
 from datetime import UTC, datetime
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -14,20 +13,22 @@ from app.clients.pyannote_schemas import (
     TranscriptionSegment,
 )
 from app.config import Settings
-from app.constants import INTERNAL_SERVER_ERROR_MESSAGE, JobStatus
-from app.exceptions import EmptyAudioError, PyannoteClientError, PyannoteJobFailedError
-from app.transcription.schemas import TranscribeAccepted
-from app.transcription.service import (
-    TranscriptionService,
-    format_turn_level_transcript,
-    format_user_error,
+from app.constants import JobStatus
+from app.exceptions import (
+    EmptyAudioError,
+    EmptyTranscriptError,
+    PyannoteClientError,
+    PyannoteJobFailedError,
+    PyannoteJobTimeoutError,
 )
+from app.transcription.schemas import TranscribeAccepted
+from app.transcription.service import TranscriptionService, format_turn_level_transcript
 
 
-def _settings(tmp_path: Path | None = None) -> Settings:
+def _settings() -> Settings:
     return Settings(
         pyannote_api_key="fake-api-key",
-        transcription_output_dir=tmp_path or Path("data/transcriptions"),
+        anthropic_api_key="fake-anthropic-key",
     )
 
 
@@ -42,12 +43,6 @@ def test_format_turn_level_transcript_joins_speaker_lines() -> None:
     ]
     result = format_turn_level_transcript(segments)
     assert result == "[SPEAKER_00] fake-turn-one\n[SPEAKER_01] fake-turn-two"
-
-
-def test_format_user_error_includes_message_and_timestamp() -> None:
-    occurred_at = datetime(2026, 9, 7, 14, 33, 4, 358000, tzinfo=UTC)
-    result = format_user_error(occurred_at)
-    assert result == (f"{INTERNAL_SERVER_ERROR_MESSAGE}\n{occurred_at.isoformat()}")
 
 
 async def test_start_transcription_returns_accepted(mocker: MockerFixture) -> None:
@@ -91,10 +86,7 @@ async def test_start_transcription_propagates_client_error(
         )
 
 
-async def test_persist_job_result_writes_txt_transcript(
-    mocker: MockerFixture,
-    tmp_path: Path,
-) -> None:
+async def test_wait_and_format_returns_transcript(mocker: MockerFixture) -> None:
     job = DiarizationJob(
         job_id="job-0001",
         status=JobStatus.SUCCEEDED,
@@ -115,43 +107,14 @@ async def test_persist_job_result_writes_txt_transcript(
         new_callable=AsyncMock,
         return_value=job,
     )
-    await TranscriptionService(settings=_settings(tmp_path)).persist_job_result(
+    result = await TranscriptionService(settings=_settings()).wait_and_format(
         "job-0001"
     )
-    saved_text = (tmp_path / "job-0001.txt").read_text(encoding="utf-8")
-    assert saved_text == "[SPEAKER_00] fake-turn-one\n[SPEAKER_01] fake-turn-two"
+    assert result == "[SPEAKER_00] fake-turn-one\n[SPEAKER_01] fake-turn-two"
 
 
-async def test_persist_job_result_writes_user_error_txt(
+async def test_wait_and_format_raises_on_failed_job(
     mocker: MockerFixture,
-    tmp_path: Path,
-) -> None:
-    occurred_at = datetime(2026, 9, 7, 14, 33, 4, 358000, tzinfo=UTC)
-    failed = DiarizationJob(
-        job_id="job-0001",
-        status=JobStatus.FAILED,
-        updated_at=occurred_at,
-        output=DiarizationJobOutput(error="fake-upstream-error"),
-    )
-    mocker.patch.object(
-        PyannoteClient,
-        "wait_for_job",
-        new_callable=AsyncMock,
-        side_effect=PyannoteJobFailedError("job-0001 failed", job=failed),
-    )
-    await TranscriptionService(settings=_settings(tmp_path)).persist_job_result(
-        "job-0001"
-    )
-    saved_text = (tmp_path / "job-0001.txt").read_text(encoding="utf-8")
-    assert saved_text == format_user_error(occurred_at)
-    assert "job-0001" not in saved_text
-    assert "failed" not in saved_text.lower()
-    assert "fake-upstream-error" not in saved_text
-
-
-async def test_persist_job_result_logs_internal_error(
-    mocker: MockerFixture,
-    tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     occurred_at = datetime(2026, 9, 7, 14, 33, 4, 358000, tzinfo=UTC)
@@ -168,15 +131,14 @@ async def test_persist_job_result_logs_internal_error(
         side_effect=PyannoteJobFailedError("job-0001 failed", job=failed),
     )
     with caplog.at_level(logging.ERROR, logger="app.transcription.service"):
-        await TranscriptionService(settings=_settings(tmp_path)).persist_job_result(
-            "job-0001"
-        )
+        with pytest.raises(PyannoteJobFailedError):
+            await TranscriptionService(settings=_settings()).wait_and_format("job-0001")
 
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.levelname == "ERROR"
     assert record.msg == (
-        "transcription persist failed job_id=%s status=%s detail=%s occurred_at=%s"
+        "transcription wait failed job_id=%s status=%s detail=%s occurred_at=%s"
     )
     assert record.args == (
         "job-0001",
@@ -184,3 +146,37 @@ async def test_persist_job_result_logs_internal_error(
         "fake-upstream-error",
         occurred_at.isoformat(),
     )
+
+
+async def test_wait_and_format_raises_on_empty_turns(
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    occurred_at = datetime(2026, 9, 7, 14, 33, 4, 358000, tzinfo=UTC)
+    job = DiarizationJob(
+        job_id="job-0001",
+        status=JobStatus.SUCCEEDED,
+        updated_at=occurred_at,
+        output=DiarizationJobOutput(),
+    )
+    mocker.patch.object(
+        PyannoteClient,
+        "wait_for_job",
+        new_callable=AsyncMock,
+        return_value=job,
+    )
+    with caplog.at_level(logging.ERROR, logger="app.transcription.service"):
+        with pytest.raises(EmptyTranscriptError):
+            await TranscriptionService(settings=_settings()).wait_and_format("job-0001")
+    assert len(caplog.records) == 1
+
+
+async def test_wait_and_format_raises_on_timeout(mocker: MockerFixture) -> None:
+    mocker.patch.object(
+        PyannoteClient,
+        "wait_for_job",
+        new_callable=AsyncMock,
+        side_effect=PyannoteJobTimeoutError("job-0001 timed out"),
+    )
+    with pytest.raises(PyannoteJobTimeoutError):
+        await TranscriptionService(settings=_settings()).wait_and_format("job-0001")
