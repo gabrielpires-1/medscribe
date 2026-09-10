@@ -1,65 +1,65 @@
 # medscribe
 
-MVP open source para transformar gravações de consultas médicas em **rascunhos editáveis** de prontuário (SOAP), receita e pedidos de exame. A interface é em português do Brasil.
+Open-source MVP that turns medical consultation recordings into **editable drafts** of a medical record (SOAP), prescription, and lab/imaging orders. The UI is in Brazilian Portuguese.
 
-O fluxo é: **áudio → transcrição diarizada (pyannote.ai) → extração estruturada (Claude) → revisão humana no navegador**.
+Pipeline: **audio → diarized transcription (pyannote.ai) → structured extraction (Claude) → human review in the browser**.
 
-> **Aviso:** este software gera rascunhos para revisão — não substitui julgamento clínico. Não use com dados reais de pacientes sem avaliar LGPD, consentimento e contratos com os provedores externos.
+> **Disclaimer:** this software produces drafts for review — it does not replace clinical judgment. Do not use with real patient data without assessing privacy law (e.g. LGPD), consent, and agreements with external providers.
 
-## Pré-requisitos
+## Prerequisites
 
-| Ferramenta | Versão mínima | Uso |
-|------------|---------------|-----|
+| Tool | Minimum version | Purpose |
+|------|-----------------|---------|
 | [Python](https://www.python.org/) | 3.12+ | API (FastAPI) |
-| [uv](https://docs.astral.sh/uv/) | recente | dependências Python |
-| [Node.js](https://nodejs.org/) | 20+ | frontend Next.js |
-| npm | (vem com Node) | frontend |
+| [uv](https://docs.astral.sh/uv/) | recent | Python dependencies |
+| [Node.js](https://nodejs.org/) | 20+ | Next.js frontend |
+| npm | (bundled with Node) | frontend |
 
-## Chaves de API (obrigatórias)
+## API keys (required)
 
-O backend **não inicia** sem as duas chaves abaixo. Crie contas nos provedores e gere tokens de API.
+The backend **will not start** without both keys below. Create accounts with the providers and generate API tokens.
 
-### 1. pyannote.ai — transcrição e diarização
+### 1. pyannote.ai — transcription and diarization
 
-- **Site:** [https://pyannote.ai](https://pyannote.ai)
-- **Variável:** `MEDSCRIBE_PYANNOTE_API_KEY`
-- **Função:** envia o áudio da consulta, separa falantes (`SPEAKER_00`, `SPEAKER_01`, …) e devolve a transcrição turno a turno.
-- **Documentação:** [https://docs.pyannote.ai](https://docs.pyannote.ai)
+- **Website:** [https://pyannote.ai](https://pyannote.ai)
+- **Variable:** `MEDSCRIBE_PYANNOTE_API_KEY`
+- **Role:** sends consultation audio, separates speakers (`SPEAKER_00`, `SPEAKER_01`, …), and returns turn-by-turn transcription.
+- **Docs:** [https://docs.pyannote.ai](https://docs.pyannote.ai)
 
-### 2. Anthropic — extração de documentos clínicos
+### 2. Anthropic — clinical document extraction
 
-- **Site:** [https://console.anthropic.com](https://console.anthropic.com)
-- **Variável:** `MEDSCRIBE_ANTHROPIC_API_KEY`
-- **Função:** lê a transcrição e gera JSON estruturado (SOAP, receita, exames) via Claude com saída tipada.
-- **Modelo padrão:** `claude-sonnet-4-5` (`MEDSCRIBE_ANTHROPIC_MODEL`)
-- **Documentação:** [https://docs.anthropic.com](https://docs.anthropic.com)
+- **Website:** [https://console.anthropic.com](https://console.anthropic.com)
+- **Variable:** `MEDSCRIBE_ANTHROPIC_API_KEY`
+- **Role:** reads the transcript and generates structured JSON (SOAP, prescription, exam orders) via Claude with typed output.
+- **Default model:** `claude-sonnet-4-5` (`MEDSCRIBE_ANTHROPIC_MODEL`)
+- **Docs:** [https://docs.anthropic.com](https://docs.anthropic.com)
 
-**Custo:** ambos os serviços são pagos por uso. Consulte a precificação de cada um antes de rodar consultas longas ou em volume.
+**Cost:** both services are pay-as-you-go. Check pricing before running long or high-volume consultations.
 
-## Configuração
+## Setup
 
-Na raiz do repositório:
+From the repository root:
 
 ```bash
 cp .env.example .env
 ```
 
-Edite `.env` e preencha as chaves:
+Edit `.env` and fill in your keys:
 
 ```env
-MEDSCRIBE_PYANNOTE_API_KEY=sua-chave-pyannote
-MEDSCRIBE_ANTHROPIC_API_KEY=sua-chave-anthropic
+MEDSCRIBE_PYANNOTE_API_KEY=your-pyannote-key
+MEDSCRIBE_ANTHROPIC_API_KEY=your-anthropic-key
 MEDSCRIBE_ANTHROPIC_MODEL=claude-sonnet-4-5
 MEDSCRIBE_CORS_ORIGINS=["http://localhost:3000"]
 ```
 
-Instale as dependências Python:
+Install Python dependencies:
 
 ```bash
 uv sync
 ```
 
-Instale as dependências do frontend:
+Install frontend dependencies:
 
 ```bash
 cd frontend
@@ -67,30 +67,30 @@ npm install
 cd ..
 ```
 
-### Variáveis de ambiente (referência)
+### Environment variables (reference)
 
-| Variável | Obrigatória | Padrão | Descrição |
-|----------|-------------|--------|-----------|
-| `MEDSCRIBE_PYANNOTE_API_KEY` | sim | — | Bearer token da pyannote.ai |
-| `MEDSCRIBE_ANTHROPIC_API_KEY` | sim | — | API key da Anthropic |
-| `MEDSCRIBE_ANTHROPIC_MODEL` | não | `claude-sonnet-4-5` | Modelo Claude para extração |
-| `MEDSCRIBE_ANTHROPIC_MAX_TOKENS` | não | `8192` | Limite de tokens na resposta |
-| `MEDSCRIBE_ANTHROPIC_BASE_URL` | não | `https://api.anthropic.com` | Base URL da API Anthropic |
-| `MEDSCRIBE_PYANNOTE_BASE_URL` | não | `https://api.pyannote.ai` | Base URL da pyannote.ai |
-| `MEDSCRIBE_PYANNOTE_POLL_INTERVAL_SECONDS` | não | `10` | Intervalo de polling do job pyannote |
-| `MEDSCRIBE_PYANNOTE_POLL_TIMEOUT_SECONDS` | não | `600` | Timeout total do job pyannote |
-| `MEDSCRIBE_CONSULTATION_OUTPUT_DIR` | não | `data/consultations` | Pasta onde consultas são persistidas |
-| `MEDSCRIBE_CORS_ORIGINS` | não | `["http://localhost:3000"]` | Origens permitidas no CORS (JSON array) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MEDSCRIBE_PYANNOTE_API_KEY` | yes | — | pyannote.ai Bearer token |
+| `MEDSCRIBE_ANTHROPIC_API_KEY` | yes | — | Anthropic API key |
+| `MEDSCRIBE_ANTHROPIC_MODEL` | no | `claude-sonnet-4-5` | Claude model for extraction |
+| `MEDSCRIBE_ANTHROPIC_MAX_TOKENS` | no | `8192` | Max tokens in the response |
+| `MEDSCRIBE_ANTHROPIC_BASE_URL` | no | `https://api.anthropic.com` | Anthropic API base URL |
+| `MEDSCRIBE_PYANNOTE_BASE_URL` | no | `https://api.pyannote.ai` | pyannote.ai base URL |
+| `MEDSCRIBE_PYANNOTE_POLL_INTERVAL_SECONDS` | no | `10` | pyannote job poll interval |
+| `MEDSCRIBE_PYANNOTE_POLL_TIMEOUT_SECONDS` | no | `600` | pyannote job total timeout |
+| `MEDSCRIBE_CONSULTATION_OUTPUT_DIR` | no | `data/consultations` | Directory for persisted consultations |
+| `MEDSCRIBE_CORS_ORIGINS` | no | `["http://localhost:3000"]` | CORS allowed origins (JSON array) |
 
-No frontend, opcionalmente:
+Frontend (optional):
 
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `MEDSCRIBE_API_URL` | `http://localhost:8000` | URL da API para o proxy do Next.js |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MEDSCRIBE_API_URL` | `http://localhost:8000` | API URL for the Next.js proxy |
 
-## Executar
+## Run
 
-Abra **dois terminais**.
+Use **two terminals**.
 
 **Terminal 1 — API:**
 
@@ -98,7 +98,7 @@ Abra **dois terminais**.
 uv run uvicorn app.main:app --reload
 ```
 
-A API fica em `http://localhost:8000`. Documentação interativa: `http://localhost:8000/docs`.
+API at `http://localhost:8000`. Interactive docs: `http://localhost:8000/docs`.
 
 **Terminal 2 — frontend:**
 
@@ -107,122 +107,122 @@ cd frontend
 npm run dev
 ```
 
-Abra `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-## Como usar (interface)
+## Using the UI
 
-1. Clique em **Gravar consulta** e autorize o microfone.
-2. Encerre a gravação quando terminar a consulta (ou envie um arquivo de áudio, se habilitado).
-3. Aguarde o processamento: transcrição → extração de documentos.
-4. Revise e edite os rascunhos de **Prontuário (SOAP)**, **Receita** e **Requisição de exames**.
-5. Preencha cabeçalho (paciente, médico, etc.) e use **Imprimir** quando estiver satisfeito.
+1. Click **Gravar consulta** (Record consultation) and allow microphone access.
+2. Stop recording when the consultation ends (or upload an audio file if that option is enabled).
+3. Wait for processing: transcription → document extraction.
+4. Review and edit drafts for **Medical record (SOAP)**, **Prescription**, and **Exam orders**.
+5. Fill in the header (patient, physician, etc.) and use **Print** when ready.
 
-Em modo desenvolvimento (`npm run dev`), uma cópia do áudio pode ser salva em `frontend/recordings/` para revisão de qualidade — essa pasta está no `.gitignore`.
+In development (`npm run dev`), a copy of the audio may be saved under `frontend/recordings/` for quality review — that directory is in `.gitignore`.
 
-## Como funciona
+## How it works
 
 ### Pipeline
 
 ```
-Navegador          medscribe (API)              Serviços externos
+Browser            medscribe (API)              External services
     |                    |                              |
     | POST /consultations|                              |
-    | (upload áudio)     | upload + job diarize         |
+    | (audio upload)     | upload + diarize job         |
     | -----------------> | ---------------------------> | pyannote.ai
     | 202 { id }         |                              |
     |                    | [background] poll + format   |
     |                    | ---------------------------> | pyannote.ai
-    |                    | grava transcript.txt         |
+    |                    | write transcript.txt         |
     |                    | messages.parse (Claude)      |
     |                    | ---------------------------> | Anthropic
-    |                    | grava documents.json         |
+    |                    | write documents.json         |
     | GET /consultations/{id} (poll)                    |
     | -----------------> |                              |
-    | status + rascunhos |                              |
+    | status + drafts    |                              |
     | <----------------- |                              |
 ```
 
-Estados da consulta: `transcribing` → `extracting` → `succeeded` | `failed`.
+Consultation states: `transcribing` → `extracting` → `succeeded` | `failed`.
 
-A **transcrição diarizada não é exposta** na API pública — fica apenas em disco no servidor. O cliente recebe status e, quando pronto, os documentos estruturados.
+The **diarized transcript is not exposed** by the public API — it stays on disk on the server. The client receives status and, when ready, structured documents.
 
-### Armazenamento local
+### Local storage
 
-Cada consulta gera uma pasta:
+Each consultation creates a directory:
 
 ```
 data/consultations/{consultation_id}/
-  meta.json         # id, status, timestamps, erro (se houver)
-  transcript.txt    # transcrição para o LLM (não servida pela API)
-  documents.json    # SOAP, receita e exames validados
+  meta.json         # id, status, timestamps, error (if any)
+  transcript.txt    # LLM-ready transcript (not served by the API)
+  documents.json    # validated SOAP, prescription, and exam orders
 ```
 
-A pasta `data/` está no `.gitignore` — nada de consulta real deve ir para o Git.
+The `data/` directory is in `.gitignore` — real consultation data must not be committed.
 
-### Documentos gerados
+### Generated documents
 
-| Documento | Conteúdo |
-|-----------|----------|
-| Prontuário | SOAP (subjetivo, objetivo, avaliação, plano) |
-| Receita | lista de medicamentos (nome, dose, via, frequência, duração, instruções) |
-| Exames | lista de pedidos (nome, indicação, instruções) |
+| Document | Contents |
+|----------|----------|
+| Medical record | SOAP (subjective, objective, assessment, plan) |
+| Prescription | medication list (name, dosage, route, frequency, duration, instructions) |
+| Exam orders | order list (name, indication, instructions) |
 
-O prompt instrui o modelo a **não inventar** dados clínicos ausentes na transcrição e a tratar falantes apenas como `SPEAKER_XX` (sem assumir quem é médico ou paciente).
+The extraction prompt instructs the model **not to invent** clinical facts missing from the transcript and to treat speakers only as `SPEAKER_XX` (without assuming clinician vs. patient roles).
 
-### API HTTP
+### HTTP API
 
-| Método | Caminho | Sucesso | Descrição |
-|--------|---------|---------|-----------|
+| Method | Path | Success | Description |
+|--------|------|---------|-------------|
 | `GET` | `/health` | 200 | Health check (`{"status": "ok"}`) |
-| `POST` | `/consultations` | 202 | Envia áudio (`multipart/form-data`, campo `file`) |
-| `GET` | `/consultations/{id}` | 200 | Consulta status e documentos |
-| `POST` | `/consultations/{id}/extract` | 202 | Reprocessa só a extração (sem re-transcrever) |
+| `POST` | `/consultations` | 202 | Upload audio (`multipart/form-data`, field `file`) |
+| `GET` | `/consultations/{id}` | 200 | Poll status and documents |
+| `POST` | `/consultations/{id}/extract` | 202 | Retry extraction only (no re-transcription) |
 
-Detalhes do contrato: [docs/adr/0002-consultation-pipeline.md](docs/adr/0002-consultation-pipeline.md).
+Full contract: [docs/adr/0002-consultation-pipeline.md](docs/adr/0002-consultation-pipeline.md).
 
-Exemplo com `curl`:
+Example with `curl`:
 
 ```bash
 curl -X POST http://localhost:8000/consultations \
-  -F "file=@consulta.wav"
+  -F "file=@consultation.wav"
 
 curl http://localhost:8000/consultations/{id}
 ```
 
-## Bibliotecas e serviços de terceiros
+## Third-party services and libraries
 
-### Serviços externos (APIs)
+### External APIs
 
-| Serviço | Uso no medscribe |
-|---------|------------------|
-| **[pyannote.ai](https://pyannote.ai)** | Upload de áudio, diarização e transcrição |
-| **[Anthropic Claude](https://www.anthropic.com)** | Extração estruturada dos rascunhos clínicos |
+| Service | Role in medscribe |
+|---------|-------------------|
+| **[pyannote.ai](https://pyannote.ai)** | Audio upload, diarization, and transcription |
+| **[Anthropic Claude](https://www.anthropic.com)** | Structured extraction of clinical drafts |
 
-Ao usar o software, áudio e transcrição são enviados a esses provedores conforme suas políticas de privacidade e termos de uso.
+Using the software sends audio and transcript text to these providers under their privacy policies and terms of use.
 
 ### Backend (Python)
 
-| Biblioteca | Papel |
-|------------|-------|
-| [FastAPI](https://fastapi.tiangolo.com/) | API HTTP, upload, background tasks |
-| [anthropic](https://github.com/anthropics/anthropic-sdk-python) | SDK oficial — `messages.parse` com saída Pydantic |
-| [httpx2](https://pypi.org/project/httpx2/) | Cliente HTTP para a API pyannote.ai |
-| [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) | Configuração via `.env` |
+| Library | Role |
+|---------|------|
+| [FastAPI](https://fastapi.tiangolo.com/) | HTTP API, upload, background tasks |
+| [anthropic](https://github.com/anthropics/anthropic-sdk-python) | Official SDK — `messages.parse` with Pydantic output |
+| [httpx2](https://pypi.org/project/httpx2/) | HTTP client for the pyannote.ai API |
+| [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) | Configuration via `.env` |
 
-Gerenciamento de dependências: [uv](https://docs.astral.sh/uv/).
+Dependency management: [uv](https://docs.astral.sh/uv/).
 
 ### Frontend (TypeScript)
 
-| Biblioteca | Papel |
-|------------|-------|
-| [Next.js](https://nextjs.org/) | App Router, proxy `/consultations` → API |
-| [React](https://react.dev/) | Interface de gravação e revisão de rascunhos |
+| Library | Role |
+|---------|------|
+| [Next.js](https://nextjs.org/) | App Router, proxies `/consultations` to the API |
+| [React](https://react.dev/) | Recording and draft review UI |
 
-APIs do navegador: `MediaRecorder` e `getUserMedia` para captura de áudio.
+Browser APIs: `MediaRecorder` and `getUserMedia` for audio capture.
 
-## Desenvolvimento
+## Development
 
-Testes e qualidade (Python):
+Python tests and quality gates:
 
 ```bash
 uv run pytest
@@ -240,26 +240,26 @@ npm run lint
 npm run build
 ```
 
-## Limitações do MVP
+## MVP limitations
 
-- **Sem autenticação** — qualquer cliente que alcance a API pode criar consultas.
-- **Background tasks** — se o processo da API encerrar no meio do pipeline, o status pode ficar preso em `transcribing` ou `extracting`.
-- **Disco local** — não há fila durável nem storage compartilhado entre instâncias.
-- **Rascunhos, não prontuário final** — sempre exija revisão humana antes de qualquer uso clínico.
+- **No authentication** — any client that can reach the API can create consultations.
+- **Background tasks** — if the API process exits mid-pipeline, status may stay stuck at `transcribing` or `extracting`.
+- **Local disk** — no durable queue or shared storage across instances.
+- **Drafts, not final records** — always require human review before any clinical use.
 
-## Estrutura do projeto
+## Project layout
 
 ```
 app/
-  consultation/     # rotas e orquestração da consulta
-  transcription/      # integração pyannote (interno, sem rota pública)
-  extraction/         # prompt e schemas dos documentos
-  clients/            # wrappers pyannote e Anthropic
-frontend/             # UI Next.js (pt-BR)
-docs/adr/             # decisões de arquitetura
-tests/                # pytest (dados fake, sem rede)
+  consultation/     # routes and consultation orchestration
+  transcription/    # pyannote integration (internal, no public route)
+  extraction/       # document schemas and prompts
+  clients/          # pyannote and Anthropic wrappers
+frontend/           # Next.js UI (pt-BR)
+docs/adr/           # architecture decisions
+tests/              # pytest (fake data, no network)
 ```
 
-## Licença
+## License
 
-Ver [LICENSE](LICENSE).
+See [LICENSE](LICENSE).
