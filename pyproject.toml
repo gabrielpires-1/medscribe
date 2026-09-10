@@ -3,9 +3,7 @@ name = "medscribe"
 version = "0.1.0"
 description = "Medical scribe FastAPI service"
 readme = "README.md"
-authors = [
-    { name = "Gabriel Pires", email = "gabrielpires2991@gmail.com" }
-]
+authors = [{ name = "Gabriel Pires" }]
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=1.4.0",
