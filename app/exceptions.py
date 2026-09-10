@@ -28,3 +28,19 @@ class PyannoteJobFailedError(PyannoteClientError):
     def __init__(self, message: str, job: DiarizationJob | None = None) -> None:
         super().__init__(message)
         self.job = job
+
+
+class EmptyTranscriptError(PyannoteClientError):
+    pass
+
+
+class AnthropicClientError(AppError):
+    pass
+
+
+class ConsultationNotFoundError(AppError):
+    pass
+
+
+class ExtractNotReadyError(AppError):
+    pass

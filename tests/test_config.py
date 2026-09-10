@@ -7,17 +7,32 @@ from app.config import Settings, get_settings
 
 
 def test_settings_defaults() -> None:
-    settings = Settings(pyannote_api_key="fake-api-key")
+    settings = Settings(
+        pyannote_api_key="fake-api-key",
+        anthropic_api_key="fake-anthropic-key",
+    )
     assert settings.app_name == "medscribe"
     assert settings.app_version == "0.1.0"
     assert settings.pyannote_base_url == "https://api.pyannote.ai"
     assert settings.pyannote_poll_interval_seconds == 10
     assert settings.pyannote_poll_timeout_seconds == 600
-    assert settings.transcription_output_dir == Path("data/transcriptions")
+    assert settings.anthropic_base_url == "https://api.anthropic.com"
+    assert settings.anthropic_model == "claude-sonnet-4-5"
+    assert settings.anthropic_max_tokens == 8192
+    assert settings.consultation_output_dir == Path("data/consultations")
+    assert settings.cors_origins == ["http://localhost:3000"]
 
 
 def test_pyannote_api_key_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDSCRIBE_ANTHROPIC_API_KEY", "fake-anthropic-key")
     monkeypatch.delenv("MEDSCRIBE_PYANNOTE_API_KEY", raising=False)
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+
+def test_anthropic_api_key_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDSCRIBE_PYANNOTE_API_KEY", "fake-api-key")
+    monkeypatch.delenv("MEDSCRIBE_ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
 

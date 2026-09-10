@@ -7,8 +7,13 @@ from uuid import uuid4
 from app.clients.pyannote_client import PyannoteClient
 from app.clients.pyannote_schemas import DiarizationJob, TranscriptionSegment
 from app.config import Settings, get_settings
-from app.constants import INTERNAL_SERVER_ERROR_MESSAGE, TRANSCRIPTION_FILE_SUFFIX
-from app.exceptions import EmptyAudioError, PyannoteJobFailedError
+from app.constants import EMPTY_AUDIO_MESSAGE
+from app.exceptions import (
+    EmptyAudioError,
+    EmptyTranscriptError,
+    PyannoteJobFailedError,
+    PyannoteJobTimeoutError,
+)
 from app.transcription.schemas import TranscribeAccepted
 
 logger = logging.getLogger(__name__)
@@ -18,8 +23,23 @@ def format_turn_level_transcript(segments: list[TranscriptionSegment]) -> str:
     return "\n".join(f"[{seg.speaker}] {seg.text}" for seg in segments)
 
 
-def format_user_error(occurred_at: datetime) -> str:
-    return f"{INTERNAL_SERVER_ERROR_MESSAGE}\n{occurred_at.isoformat()}"
+def _log_wait_failure(job_id: str, job: DiarizationJob | None) -> None:
+    occurred_at = datetime.now(UTC)
+    status = None
+    detail = None
+    if job is not None:
+        status = job.status
+        if job.updated_at is not None:
+            occurred_at = job.updated_at
+        if job.output is not None:
+            detail = job.output.error
+    logger.error(
+        "transcription wait failed job_id=%s status=%s detail=%s occurred_at=%s",
+        job_id,
+        status,
+        detail,
+        occurred_at.isoformat(),
+    )
 
 
 class TranscriptionService:
@@ -33,38 +53,23 @@ class TranscriptionService:
 
     async def start_transcription(self, content: bytes) -> TranscribeAccepted:
         if not content:
-            raise EmptyAudioError("audio file is empty")
+            raise EmptyAudioError(EMPTY_AUDIO_MESSAGE)
         object_key = uuid4().hex
         media_url = await self._client.upload_audio(object_key, content)
         created = await self._client.create_diarize_job(media_url)
         return TranscribeAccepted(job_id=created.job_id, status=created.status)
 
-    async def persist_job_result(self, job_id: str) -> None:
+    async def wait_and_format(self, job_id: str) -> str:
         try:
             job = await self._client.wait_for_job(job_id)
+        except PyannoteJobTimeoutError:
+            _log_wait_failure(job_id, None)
+            raise
         except PyannoteJobFailedError as exc:
-            if exc.job is None:
-                raise
-            job = exc.job
-        self._write_job(job)
-
-    def _write_job(self, job: DiarizationJob) -> None:
-        output_dir = self._settings.transcription_output_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
-        path = output_dir / f"{job.job_id}{TRANSCRIPTION_FILE_SUFFIX}"
-
+            _log_wait_failure(job_id, exc.job)
+            raise
         turns = job.output.turn_level_transcription if job.output is not None else None
-        if turns:
-            path.write_text(format_turn_level_transcript(turns), encoding="utf-8")
-            return
-
-        occurred_at = job.updated_at or datetime.now(UTC)
-        detail = job.output.error if job.output else None
-        logger.error(
-            "transcription persist failed job_id=%s status=%s detail=%s occurred_at=%s",
-            job.job_id,
-            job.status,
-            detail,
-            occurred_at.isoformat(),
-        )
-        path.write_text(format_user_error(occurred_at), encoding="utf-8")
+        if not turns:
+            _log_wait_failure(job_id, job)
+            raise EmptyTranscriptError(f"job {job_id} has no turn-level transcription")
+        return format_turn_level_transcript(turns)

@@ -12,3 +12,7 @@ dist/
 htmlcov/
 data/
 dialogue.wav
+frontend/node_modules/
+frontend/.next/
+frontend/recordings/*
+!frontend/recordings/.gitkeep
