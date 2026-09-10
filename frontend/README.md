@@ -1,10 +1,12 @@
-# Medscribe — frontend
+# Frontend — medscribe
 
-Aplicação Next.js (App Router) para gravar a consulta e revisar rascunhos de prontuário SOAP, receita e requisição de exames.
+Interface Next.js para gravar consultas e revisar rascunhos clínicos.
+
+Setup, chaves de API, arquitetura e uso completo estão no [README da raiz](../README.md).
 
 ```bash
 npm install
 npm run dev
 ```
 
-A interface fica em `http://localhost:3000` e encaminha `/consultations` para a API em `http://localhost:8000`.
+Abra `http://localhost:3000` com a API rodando em `http://localhost:8000`.
